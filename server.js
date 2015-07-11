@@ -24,12 +24,28 @@ app.get('/search/:name', function(req, res) {
   searchReq.on('end', function(item) {
     var artist = item.artists.items[0];
     var id = artist.id;
-    // res.json(artist);
     
     var relatedReq = getFromApi('artists/'+id+'/related-artists');
     relatedReq.on('end', function(item) {
     	artist.related = item.artists;
-    	res.json(artist);
+      var count = 0;
+      var length = artist.related.length;
+      artist.related.forEach(function(relArtist) {
+        var trackReq = getFromApi('artists/'+relArtist.id+'/top-tracks', {
+          country: 'US'
+        });
+        trackReq.on('end', function(item) {
+          console.log(item);
+          relArtist.tracks = item.tracks;
+          count++
+          if (count == length) {
+            res.json(artist);
+          }
+        });
+        trackReq.on('error', function() {
+          res.sendStatus(404);
+        });
+      });
     });
 
     relatedReq.on('error', function() {
